@@ -1,0 +1,42 @@
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Setup fonts
+        run: sudo apt install fonts-noto-cjk
+      - name: Setup Typst
+        uses: typst-community/setup-typst@v4
+        with:
+          cache-dependency-path: requirements.typ
+      - name: Compile slides
+        run: |
+          mkdir dist
+          for dir in $(dirname */main.typ); do
+            typst compile $dir/main.typ dist/$dir.pdf
+          done
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: render
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
